@@ -1,25 +1,144 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+output: md_document
 ---
 
+Rep_Peer_Assignment Week 2 
+============================
 
-## Loading and preprocessing the data
+## Question 1
+
+### Histogram Plot for number of steps per day
+
+```{r}
+library(dplyr)
+activity <- read.csv("activity.csv")
+steps_by_date <- activity %>%        ##Formatting the data to plot Histogram
+                 group_by(date) %>%
+                 summarise(steps =  sum(steps)) %>%
+                 na.omit()
+
+ steps_by_date_hist <- hist(steps_by_date$steps, xlab = "steps",
+                            breaks = 20)
+ 
+ steps_by_date_hist
+    
+```
+
+### Mean and Median for the number of steps grouped by date 
+
+```{r}
+
+raw_data_mean <- mean(steps_by_date$steps)
+
+raw_data_mean
+
+raw_data_median <- median(steps_by_date$steps)
+
+raw_data_median
+```
 
 
 
-## What is mean total number of steps taken per day?
+## Question 2
+
+### Grouping the data by the interval and producing a line plot
+
+```{r}
+library(ggplot2)
+steps_interval <- activity %>%
+                  select(interval, steps) %>%
+                  na.omit() %>%
+                  group_by(interval) %>%
+                  summarise(steps = mean(steps))
+
+g <- ggplot(steps_interval, aes(interval, steps)) + geom_line()
+
+g
+```
+
+### Which 5 minute interval contains maximum number of steps
+
+```{r}
+
+max_steps_interval <- steps_interval[which(steps_interval$steps == max(steps_interval$steps)),]
+
+max_steps_interval
+```
 
 
+## Question 3
 
-## What is the average daily activity pattern?
+### Calculating number of rows with missing values in original dataset
+
+```{r}
+sum(is.na(activity))
+```
+
+### Imputing the rows using the impute function from Hmisc Package
+
+```{r}
+library(Hmisc)
+activity_imputed <- activity
+activity_imputed$steps <- impute(activity_imputed$steps, fun = mean)
+sum(is.na(activity_imputed))
+```
+
+### Ploting a Histogram from imputed data 
+
+```{r}
+steps_by_date_imputed <- activity_imputed %>% 
+                 group_by(date) %>%
+                 summarise(steps =  sum(steps)) %>%
+                 na.omit()
+
+ steps_by_date_hist_imputed <- hist(steps_by_date_imputed$steps, xlab = "steps", breaks = 20)
+ 
+ steps_by_date_hist_imputed
+
+```
+
+### Comparing Mean and Median of imputed data with raw data
+
+```{r}
+print("Raw Data Mean :")
+raw_data_mean
+print("Imputed Data Mean :")
+mean(steps_by_date_imputed$steps)
+print("Raw Data Median :")
+raw_data_median
+print("Imputed Data median :")
+median(steps_by_date_imputed$steps)
+```
 
 
+## Question 4
 
-## Imputing missing values
+### Separating the data into weekend and week days
 
+```{r}
+activity_imputed$date <- as.Date(as.character(activity_imputed$date))
+activity_imputed$weekday <- weekdays(activity_imputed$date)
+activity_imputed$weekend <- ifelse(activity_imputed$weekday=="Saturday" | activity_imputed$weekday=="Sunday", "Weekend", "Weekday" )
+head(activity_imputed)
+```
 
+### Subsetting the data set by weekend and steps
 
-## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+
+activity_imputed_subset <- aggregate(activity_imputed$steps , by= list(activity_imputed$weekend, activity_imputed$interval), na.omit(mean))
+
+names(activity_imputed_subset) <- c("weekend", "interval", "steps")
+
+head(activity_imputed_subset)
+```
+
+### Plotting a panel plot to differentiate between Weekend and Weekdays
+
+```{r}
+g2 <- ggplot(activity_imputed_subset, aes(interval, steps, color = weekend)) + geom_line() + facet_grid(weekend~.) + xlab("Interval") + ylab("Steps")
+
+g2
+
+```
+
